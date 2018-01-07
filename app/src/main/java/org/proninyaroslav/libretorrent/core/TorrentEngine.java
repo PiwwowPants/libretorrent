@@ -487,8 +487,6 @@ public class TorrentEngine extends SessionManager
         sp.tickInterval(settings.tickInterval);
         sp.inactivityTimeout(settings.inactivityTimeout);
         sp.connectionsLimit(settings.connectionsLimit);
-        sp.downloadRateLimit(settings.downloadRateLimit);
-        sp.uploadRateLimit(settings.uploadRateLimit);
         sp.setString(settings_pack.string_types.listen_interfaces.swigValue(),
                 "0.0.0.0:" + settings.port);
         sp.enableDht(settings.dhtEnabled);
