@@ -61,38 +61,48 @@ public class TorrentUtils
      */
 
     @Nullable
-    public static String copyTorrent(Context context,
-                                     String dataDirId,
-                                     String pathToTorrent) throws Throwable
+    public static String torrentToDataDir(Context context,
+                                           String dataDirId,
+                                           String pathToTorrent) throws Throwable
     {
 
-        if ((pathToTorrent == null ||
-                TextUtils.isEmpty(pathToTorrent)) ||
-                !FileIOUtils.fileExist(pathToTorrent)) {
+        if (pathToTorrent == null || TextUtils.isEmpty(pathToTorrent) || !FileIOUtils.fileExist(pathToTorrent))
             throw new FileNotFoundException();
-        }
 
-        if (torrentDataExists(context, dataDirId)) {
-            String dataDir = findTorrentDataDir(context, dataDirId);
-            /* The same file */
-            String pathToDataTorrent = (dataDir + File.separator + TorrentStorage.Model.DATA_TORRENT_FILE_NAME);
-            if (dataDir != null && pathToDataTorrent.equals(pathToTorrent)) {
-                throw new FileAlreadyExistsException();
+        return torrentToDataDir(context, dataDirId, pathToTorrent, null);
+    }
 
-            } else {
-                removeTorrentDataDir(context, dataDirId);
-            }
-        }
+    @Nullable
+    public static String torrentToDataDir(Context context,
+                                           String dataDirId,
+                                           byte[] bencode) throws Throwable
+    {
+        if (bencode == null)
+            throw new NullPointerException();
 
-        String dataDir = makeTorrentDataDir(context, dataDirId);
+        return torrentToDataDir(context, dataDirId, null, bencode);
+    }
 
-        if (dataDir == null) {
+    private static String torrentToDataDir(Context context, String dataDirId,
+                                           String pathToTorrent, byte[] bencode) throws Throwable
+    {
+        String dataDir;
+        if (torrentDataExists(context, dataDirId))
+            dataDir = findTorrentDataDir(context, dataDirId);
+        else
+            dataDir = makeTorrentDataDir(context, dataDirId);
+        if (dataDir == null)
             throw new IOException("Unable to create dir");
-        }
 
+        /* The same file */
+        if (new File(dataDir, TorrentStorage.Model.DATA_TORRENT_FILE_NAME).exists())
+            throw new FileAlreadyExistsException();
         File torrent = new File(dataDir, TorrentStorage.Model.DATA_TORRENT_FILE_NAME);
-
-        FileUtils.copyFile(new File(pathToTorrent), torrent);
+        /* We are sure that one of them is not null */
+        if (pathToTorrent != null)
+            FileUtils.copyFile(new File(pathToTorrent), torrent);
+        else
+            FileUtils.writeByteArrayToFile(torrent, bencode);
 
         return (torrent.exists() ? torrent.getAbsolutePath() : "");
     }
@@ -287,59 +297,33 @@ public class TorrentUtils
 
     public static void fetchByHTTP(Context context, String url, final File saveTo) throws FetchLinkException
     {
-        if (saveTo == null) {
+        if (saveTo == null)
             throw new FetchLinkException("File is null");
-        }
-
-        if (!Utils.checkNetworkConnection(context)) {
+        if (!Utils.checkNetworkConnection(context))
             throw new FetchLinkException("No network connection");
-        }
 
         final ArrayList<Throwable> errorArray = new ArrayList<>(1);
-
+        HttpURLConnection connection = null;
         try {
-            URL torrentFileURL = new URL(url);
-            HttpURLConnection connection = (HttpURLConnection) torrentFileURL.openConnection();
+            connection = (HttpURLConnection) new URL(url).openConnection();
             int responseCode = connection.getResponseCode();
-
-            if (responseCode == HttpURLConnection.HTTP_OK) {
-                writeUrlConnectionToFile(connection, saveTo);
-            } else {
+            if (responseCode == HttpURLConnection.HTTP_OK)
+                FileUtils.copyInputStreamToFile(connection.getInputStream(), saveTo);
+            else
                 throw new FetchLinkException("Failed to download torrent file, response code: " + responseCode);
-            }
-        } catch (MalformedURLException e) {
+        } catch (Throwable e) {
             errorArray.add(e);
-        } catch (IOException e) {
-            errorArray.add(e);
+        } finally {
+            if (connection != null)
+                connection.disconnect();
         }
 
         if (!errorArray.isEmpty()) {
             StringBuilder s = new StringBuilder();
-
-            for (Throwable e : errorArray) {
+            for (Throwable e : errorArray)
                 s.append(e.toString().concat("\n"));
-            }
 
             throw new FetchLinkException(s.toString());
-        }
-    }
-
-    private static void writeUrlConnectionToFile(HttpURLConnection connection, File file) throws IOException
-    {
-        InputStream inputStream = null;
-        FileOutputStream fileOutputStream = null;
-        try {
-            inputStream = connection.getInputStream();
-            fileOutputStream = new FileOutputStream(file);
-
-            int bytesRead = -1;
-            byte[] buffer = new byte[2048];
-            while ((bytesRead = inputStream.read(buffer)) != -1) {
-                fileOutputStream.write(buffer, 0, bytesRead);
-            }
-        } finally {
-            inputStream.close();
-            fileOutputStream.close();
         }
     }
 }

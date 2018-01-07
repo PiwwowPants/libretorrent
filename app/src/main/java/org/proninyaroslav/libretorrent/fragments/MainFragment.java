@@ -52,7 +52,6 @@ import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.Log;
-import android.util.Patterns;
 import android.util.TypedValue;
 import android.view.ActionMode;
 import android.view.ContextMenu;
@@ -99,8 +98,6 @@ import org.proninyaroslav.libretorrent.settings.SettingsManager;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -632,7 +629,8 @@ public class MainFragment extends Fragment
 
         inflater.inflate(R.menu.main, menu);
 
-        searchView = (SearchView) MenuItemCompat.getActionView(menu.findItem(R.id.search));
+        searchView = (SearchView)menu.findItem(R.id.search).getActionView();
+        searchView.setMaxWidth(Integer.MAX_VALUE);
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener()
         {
             @Override
@@ -746,12 +744,14 @@ public class MainFragment extends Fragment
             return true;
         }
 
-        if (!Utils.isValidUrl(s)) {
-            layout.setErrorEnabled(true);
-            layout.setError(getString(R.string.error_invalid_link));
-            layout.requestFocus();
+        if (s.startsWith(Utils.HTTP_PREFIX) || s.startsWith(Utils.HTTPS_PREFIX)) {
+            if (!Utils.isValidUrl(s)) {
+                layout.setErrorEnabled(true);
+                layout.setError(getString(R.string.error_invalid_link));
+                layout.requestFocus();
 
-            return false;
+                return false;
+            }
         }
 
         layout.setErrorEnabled(false);
@@ -933,8 +933,11 @@ public class MainFragment extends Fragment
 
                         if (link.startsWith(Utils.MAGNET_PREFIX)) {
                             url = link;
-                        } else {
+                        } else if (link.startsWith(Utils.HTTP_PREFIX)
+                                || link.startsWith(Utils.HTTPS_PREFIX)) {
                             url = Utils.normalizeURL(link);
+                        } else {
+                            url = Utils.INFOHASH_PREFIX + link;
                         }
 
                         if (url != null) {

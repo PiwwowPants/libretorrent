@@ -69,8 +69,6 @@ public class AddTorrentActivity extends AppCompatActivity
         addTorrentFragment = (AddTorrentFragment) getFragmentManager()
                 .findFragmentById(R.id.add_torrent_fragmentContainer);
 
-        startService(new Intent(getApplicationContext(), TorrentTaskService.class));
-
         Intent intent = getIntent();
         Uri uri;
         if (intent.getData() != null) {
@@ -137,7 +135,7 @@ public class AddTorrentActivity extends AppCompatActivity
             /* If add torrent dialog has been called by an implicit intent */
             if (getIntent().getData() != null && intent.hasExtra(TAG_RESULT_TORRENT)) {
                 Intent i = new Intent(getApplicationContext(), MainActivity.class);
-                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
                 i.putExtra(TAG_RESULT_TORRENT, intent.getParcelableExtra(TAG_RESULT_TORRENT));
                 startActivity(i);
             } else {
