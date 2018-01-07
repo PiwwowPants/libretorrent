@@ -1572,7 +1572,14 @@ public class TorrentTaskService extends Service
         if (task == null)
             return -1;
 
-        return task.getUploadSpeedLimit();
+        int globalUploadSpeedLimit = getGlobalUploadSpeedLimit();
+        int uploadSpeedLimit = task.getUploadSpeedLimit();
+        if(globalUploadSpeedLimit == -1 ||
+                (globalUploadSpeedLimit > uploadSpeedLimit && uploadSpeedLimit != -1)) {
+            return uploadSpeedLimit;
+        } else {
+            return globalUploadSpeedLimit;
+        }
     }
 
     public int getDownloadSpeedLimit(String id)
@@ -1584,7 +1591,14 @@ public class TorrentTaskService extends Service
         if (task == null)
             return -1;
 
-        return task.getDownloadSpeedLimit();
+        int globalDownloadSpeedLimit = getGlobalDownloadSpeedLimit();
+        int downloadSpeedLimit = task.getDownloadSpeedLimit();
+        if(globalDownloadSpeedLimit == -1 ||
+                (globalDownloadSpeedLimit > downloadSpeedLimit && downloadSpeedLimit != -1)) {
+            return downloadSpeedLimit;
+        } else {
+            return globalDownloadSpeedLimit;
+        }
     }
 
     public int getGlobalUploadSpeedLimit()
